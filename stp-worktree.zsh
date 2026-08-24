@@ -172,6 +172,19 @@ stp-build() {
 
     if [[ ! -e ${build}/CMakeCache.txt || $# -gt 0 ]]; then
         cmake -S "${wt}" -B "${build}" ${args} -DENABLE_AUTO_DOWNLOAD=ON "$@" || return 1
+    else
+        # An existing build directory is built with whatever it was configured
+        # with, which is right -- reconfiguring someone's build behind their
+        # back is worse. But a directory configured without the shared
+        # dependency tree shares nothing, builds everything itself, and looks
+        # from the outside exactly like one that does. Say so once.
+        local had=$(sed -n 's/^STP_DEP_DIR:PATH=//p' ${build}/CMakeCache.txt)
+        local want=$(_stp_deps)
+        if [[ -n ${had} && ${had:A} != ${want:A} ]]; then
+            print -u2 -- "stp: ${build} was configured with STP_DEP_DIR=${had},"
+            print -u2 -- "stp: not ${want}. Building it as it is."
+            print -u2 -- "stp: to move it, pass any cmake argument to reconfigure, or delete ${build}."
+        fi
     fi
     cmake --build "${build}" --parallel "$(nproc 2>/dev/null || print 4)" || return 1
     print -r -- "stp: built ${build}"

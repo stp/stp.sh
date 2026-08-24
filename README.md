@@ -100,6 +100,26 @@ The build directory is `<worktree>/build`, and it has to be inside the
 worktree: `CCACHE_BASEDIR` only rewrites paths below itself, so a build
 directory in `/tmp` gets no cache sharing.
 
+A worktree you made yourself works the same way -- `stp-new` is only a
+convenience, and nothing here cares how the worktree came about:
+
+```zsh
+cd ~/somewhere/my-worktree && stp-build   # anywhere inside it, not just the root
+stp-build ~/somewhere/my-worktree         # or by path, from anywhere
+stp-build my-worktree                     # by bare name, only if it is under STP_ROOT
+```
+
+If it has already been configured, `stp-build` builds it with whatever it was
+configured with rather than reconfiguring behind your back. That is usually
+what you want, but a build directory set up without the shared dependency tree
+shares nothing and looks no different from outside, so it says so:
+
+```
+stp: .../build was configured with STP_DEP_DIR=/some/other/place,
+stp: not ~/.cache/stp/deps. Building it as it is.
+stp: to move it, pass any cmake argument to reconfigure, or delete .../build.
+```
+
 ## Variables
 
 | Variable | Default | What it is |
