@@ -135,6 +135,36 @@ stp-env() {
     fi
 }
 
+# Which checkout to read CMake files from. An explicit argument wins. With
+# none, prefer a worktree called master, then any STP checkout under
+# STP_ROOT -- warming needs a copy of the CMake files and does not care
+# which. Somebody who has just cloned the bare repository has none of them,
+# and telling them the default was not found is no help at all, so say what
+# to do instead.
+_stp_warm_source() {
+    local root candidate
+    if [ $# -gt 0 ] && [ -n "$1" ]; then
+        _stp_resolve "$1"
+        return $?
+    fi
+    root="$(_stp_root)"
+    if [ -e "${root}/master/CMakeLists.txt" ]; then
+        printf '%s\n' "${root}/master"
+        return 0
+    fi
+    for candidate in "${root}"/*/; do
+        if [ -e "${candidate}CMakeLists.txt" ]; then
+            printf '%s\n' "${candidate%/}"
+            return 0
+        fi
+    done
+    _stp_err "no STP worktree under ${root} to warm from. Make one first:
+       stp-new <branch>          (a new branch)
+       git -C ${STP_GIT} worktree add ${root}/master master
+     then run stp-warm again, or point it at a checkout: stp-warm <path>"
+    return 1
+}
+
 # --- stp-warm -----------------------------------------------------------
 #
 # Builds every dependency once, into the shared directories, so that the
@@ -147,7 +177,7 @@ stp-env() {
 # the one copy a disconnected build can be pointed at.
 stp-warm() {
     local wt warm had
-    wt="$(_stp_resolve "${1:-master}")" || return 1
+    wt="$(_stp_warm_source "$@")" || return 1
     warm="$(_stp_warm)"
     printf 'stp: warming %s and %s from %s\n' "$(_stp_deps)" "$(_stp_fetch)" "${wt}"
     _stp_common_args

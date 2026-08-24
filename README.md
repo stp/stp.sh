@@ -93,13 +93,18 @@ stp-new my-feature            # new branch in its own worktree, and cd into it
 stp-build                     # configure if needed, then build
 ```
 
-A first run is `stp-warm` and then `stp-new`/`stp-build` per branch:
+`stp-warm` reads STP's CMake files from a checkout, so it needs one worktree
+to exist before it can do anything -- a freshly cloned bare repository has
+none. Make one first, and then warming is a one-off:
 
 ```sh
-stp-warm                      # a few minutes, once
 stp-new fix-something         # instant, leaves you in the new worktree
+stp-warm                      # a few minutes, once, from any checkout
 stp-build                     # builds STP; the dependencies are already there
 ```
+
+Afterwards it is `stp-new` and `stp-build` per branch; `stp-warm` again only
+when a dependency's pinned revision moves.
 
 ### `stp-env`
 
@@ -111,7 +116,10 @@ behaving.
 
 Builds every dependency once into the shared directories, using the given
 worktree only as a source of CMake files -- nothing of STP itself is built.
-Defaults to a worktree called `master`.
+
+With no argument it looks for a worktree called `master`, then for any STP
+checkout under `STP_ROOT`. With none at all it says so and tells you how to
+make one, because that is the state a bare repository starts in.
 
 Tests are enabled for this build so that the `lit` virtual environment is
 created too. `lit` is pip-installed per build directory rather than fetched,
@@ -144,6 +152,10 @@ stp-build my-feature -DENABLE_TESTING=ON -DCMAKE_BUILD_TYPE=Debug
 The build directory is `<worktree>/build`, and it has to be inside the
 worktree: `CCACHE_BASEDIR` only rewrites paths below itself, so a build
 directory in `/tmp` gets no cache sharing.
+
+The dependencies STP compiles are built inside that directory too, from the
+sources `stp-warm` downloaded -- see the caveat on `STP_FETCH_DIR` below for
+why they are not built in the shared directory with everything else.
 
 A worktree you made yourself works the same way -- `stp-new` is only a
 convenience, and nothing here cares how the worktree came about:
