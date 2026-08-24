@@ -214,9 +214,20 @@ directory of its own:
 STP_CACHE=~/.cache/stp-asan stp-warm
 ```
 
-`STP_FETCH_DIR` has no such warning, and each configure rewrites scratch inside
-it, so two configures running against one at the same time can race. Sequential
-use is fine.
+`STP_FETCH_DIR` needs more care, and `stp-build` handles it for you. The
+dependencies STP compiles are added with `add_subdirectory`, and FetchContent
+builds those in `<base>/<name>-build` -- so sharing the base directory shares
+the *build*, not just the download. Two worktrees whose compiler or build type
+differ then own the same object directory, and each recompiles all of mimalloc
+the next time it is built: measured with a gcc worktree and a clang one, 37
+steps to redo on every alternation, in both directions. Sequential use does not
+save you -- nothing is racing, both builds simply own the path they were given.
+
+So `stp-build` puts `FETCHCONTENT_BASE_DIR` inside the build tree and points
+each `FETCHCONTENT_SOURCE_DIR_*` at the copy `stp-warm` downloaded: sources
+shared, builds private, nothing fetched twice. If you configure by hand, do the
+same, or give each build tree its own base directory and accept the extra
+downloads.
 
 These assume STP has its dependencies fetched rather than in submodules, which
 is true from

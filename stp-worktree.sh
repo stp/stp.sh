@@ -58,14 +58,38 @@ _stp_have() { command -v "$1" >/dev/null 2>&1; }
 # Fills the array STP_ARGS. An array rather than a string because the values
 # contain paths, and re-splitting a string on spaces is how those break.
 _stp_common_args() {
-    STP_ARGS=(
-        "-DSTP_DEP_DIR=$(_stp_deps)"
-        "-DFETCHCONTENT_BASE_DIR=$(_stp_fetch)"
-    )
+    STP_ARGS=("-DSTP_DEP_DIR=$(_stp_deps)")
     _stp_have ninja && STP_ARGS+=(-G Ninja)
     if _stp_have ccache; then
         STP_ARGS+=(-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache)
     fi
+    return 0
+}
+
+# The dependencies STP compiles rather than links -- mimalloc, unordered_dense,
+# googletest, OutputCheck -- are added to the build with add_subdirectory, and
+# FetchContent builds those in ${FETCHCONTENT_BASE_DIR}/<name>-build. That
+# directory is *shared* if the base directory is, which is not what sharing a
+# download should mean: two worktrees whose compiler or build type differ then
+# overwrite each other's objects, and each one recompiles all of mimalloc the
+# next time it is built. Measured, that is 37 steps on every alternation, in
+# both directions, for as long as you keep switching between them.
+#
+# So share the sources and keep the builds apart: the base directory goes
+# inside the build tree, and each fetched source is pointed at the copy
+# stp-warm downloaded. Only the ones that exist are named -- pointing
+# FETCHCONTENT_SOURCE_DIR_* at a directory that is not there fails the
+# configure rather than falling back to downloading.
+_stp_fetch_args() {
+    local build="$1" shared name upper
+    shared="$(_stp_fetch)"
+    STP_ARGS+=("-DFETCHCONTENT_BASE_DIR=${build}/_deps")
+    for name in mimalloc unordereddense googletest outputcheck; do
+        if [ -d "${shared}/${name}-src" ]; then
+            upper=$(printf '%s' "${name}" | tr '[:lower:]' '[:upper:]')
+            STP_ARGS+=("-DFETCHCONTENT_SOURCE_DIR_${upper}=${shared}/${name}-src")
+        fi
+    done
     return 0
 }
 
@@ -127,6 +151,7 @@ stp-warm() {
     warm="$(_stp_warm)"
     printf 'stp: warming %s and %s from %s\n' "$(_stp_deps)" "$(_stp_fetch)" "${wt}"
     _stp_common_args
+    STP_ARGS+=("-DFETCHCONTENT_BASE_DIR=$(_stp_fetch)")
 
     # This build directory is scratch -- what it produces lives in
     # STP_DEP_DIR, not here -- but CMake refuses to reuse a cache that a
@@ -177,6 +202,7 @@ stp-build() {
     [ $# -gt 0 ] && shift
     build="${wt}/build"
     _stp_common_args
+    _stp_fetch_args "${build}"
 
     if [ ! -e "${build}/CMakeCache.txt" ] || [ $# -gt 0 ]; then
         cmake -S "${wt}" -B "${build}" "${STP_ARGS[@]}" -DENABLE_AUTO_DOWNLOAD=ON "$@" || return 1
