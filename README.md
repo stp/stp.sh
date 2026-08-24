@@ -1,7 +1,7 @@
 # stp.sh
 
-Shell helpers for working on [STP](https://github.com/stp/stp) across several
-worktrees.
+Helpers for working on [STP](https://github.com/stp/stp) across several
+worktrees. Works in **bash** and **zsh**.
 
 None of this is needed to build STP -- `cmake` and the flags in STP's own
 `docs/building.rst` are the whole story. What these save you is typing the
@@ -22,22 +22,67 @@ explains what each flag does and why; this repository just applies them.
 
 ## Install
 
+Clone it anywhere; the instructions below assume `~/clones/stp.sh`:
+
 ```sh
 git clone https://github.com/stp/stp.sh ~/clones/stp.sh
 ```
 
-then in `~/.bashrc` or `~/.zshrc`:
+Then point your shell at it. `STP_GIT` -- your bare STP repository -- is the
+only variable you have to set; everything else is derived from it.
 
-```sh
-export STP_GIT=~/clones/stp/stp.git      # your bare STP repository
-source ~/clones/stp.sh/stp-worktree.sh
+### zsh
+
+```zsh
+cat >> ~/.zshrc <<'EOF'
+# STP worktree helpers -- https://github.com/stp/stp.sh
+export STP_GIT=~/clones/stp/stp.git
+if [[ -r ~/clones/stp.sh/stp-worktree.sh ]]; then
+  source ~/clones/stp.sh/stp-worktree.sh
+fi
+EOF
+exec zsh
 ```
 
-`STP_GIT` is the only variable you have to set. Everything else is derived
-from it and can be overridden if your layout differs.
+### bash
 
-Works in bash and zsh. Requires `git` and `cmake`. `ninja` and `ccache` are used if they are
-installed and skipped if not.
+```bash
+cat >> ~/.bashrc <<'EOF'
+# STP worktree helpers -- https://github.com/stp/stp.sh
+export STP_GIT=~/clones/stp/stp.git
+if [ -r ~/clones/stp.sh/stp-worktree.sh ]; then
+  . ~/clones/stp.sh/stp-worktree.sh
+fi
+EOF
+exec bash
+```
+
+On macOS a login shell reads `~/.bash_profile` rather than `~/.bashrc`, so
+put it there instead, or have one source the other.
+
+The `-r` test is not decoration: without it, moving or deleting the clone
+makes every new shell start with an error. It is an `if` rather than
+`[ ... ] && ...` for a smaller reason -- the `&&` form leaves `$?` at 1 when
+the file is absent, which anyone whose prompt shows the last exit status
+would see on every new shell.
+
+Check it took:
+
+```sh
+stp-env
+```
+
+which prints every path it will use and whether the caches have been filled.
+
+### Requirements
+
+`git` and `cmake`. `ninja` and `ccache` are used if they are installed and
+skipped if they are not -- `stp-env` says which it found.
+
+Developed against bash 5.3 and zsh 5.9. Nothing here needs bash 4 features
+(no associative arrays, no `mapfile`, no case conversion), so bash 3.2 -- the
+one macOS ships -- should be fine, though that is reasoning rather than a
+test result.
 
 ## Use
 
