@@ -1,6 +1,6 @@
-# stp.zsh
+# stp.sh
 
-Zsh helpers for working on [STP](https://github.com/stp/stp) across several
+Shell helpers for working on [STP](https://github.com/stp/stp) across several
 worktrees.
 
 None of this is needed to build STP -- `cmake` and the flags in STP's own
@@ -22,26 +22,26 @@ explains what each flag does and why; this repository just applies them.
 
 ## Install
 
-```zsh
-git clone https://github.com/stp/stp.zsh ~/clones/stp.zsh
+```sh
+git clone https://github.com/stp/stp.sh ~/clones/stp.sh
 ```
 
-then in `~/.zshrc`:
+then in `~/.bashrc` or `~/.zshrc`:
 
-```zsh
+```sh
 export STP_GIT=~/clones/stp/stp.git      # your bare STP repository
-source ~/clones/stp.zsh/stp-worktree.zsh
+source ~/clones/stp.sh/stp-worktree.sh
 ```
 
 `STP_GIT` is the only variable you have to set. Everything else is derived
 from it and can be overridden if your layout differs.
 
-Requires `zsh`, `git` and `cmake`. `ninja` and `ccache` are used if they are
+Works in bash and zsh. Requires `git` and `cmake`. `ninja` and `ccache` are used if they are
 installed and skipped if not.
 
 ## Use
 
-```zsh
+```sh
 stp-env                       # what everything is set to, and what is cold
 stp-warm                      # build the shared dependencies, once
 stp-new my-feature            # new branch in its own worktree, and cd into it
@@ -50,7 +50,7 @@ stp-build                     # configure if needed, then build
 
 A first run is `stp-warm` and then `stp-new`/`stp-build` per branch:
 
-```zsh
+```sh
 stp-warm                      # a few minutes, once
 stp-new fix-something         # instant, leaves you in the new worktree
 stp-build                     # builds STP; the dependencies are already there
@@ -72,7 +72,7 @@ Tests are enabled for this build so that the `lit` virtual environment is
 created too. `lit` is pip-installed per build directory rather than fetched,
 so this is the one copy that a fully disconnected build can be pointed at:
 
-```zsh
+```sh
 stp-build my-feature -DLIT_TOOL=~/.cache/stp/warm/venv/bin/lit -DENABLE_TESTING=ON
 ```
 
@@ -92,7 +92,7 @@ one you are standing in.
 
 Any extra arguments go to CMake and force a reconfigure:
 
-```zsh
+```sh
 stp-build my-feature -DENABLE_TESTING=ON -DCMAKE_BUILD_TYPE=Debug
 ```
 
@@ -103,7 +103,7 @@ directory in `/tmp` gets no cache sharing.
 A worktree you made yourself works the same way -- `stp-new` is only a
 convenience, and nothing here cares how the worktree came about:
 
-```zsh
+```sh
 cd ~/somewhere/my-worktree && stp-build   # anywhere inside it, not just the root
 stp-build ~/somewhere/my-worktree         # or by path, from anywhere
 stp-build my-worktree                     # by bare name, only if it is under STP_ROOT
@@ -165,7 +165,7 @@ warns when the compiler, sanitizer, toolchain or ABC ABI settings that filled
 it differ from the build now using it -- a sanitizer build wants a dependency
 directory of its own:
 
-```zsh
+```sh
 STP_CACHE=~/.cache/stp-asan stp-warm
 ```
 
